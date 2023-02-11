@@ -1,0 +1,29 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: njsv3
+  namespace: nginx-ingress
+data:
+  vinrouter.js: |
+
+    //armand!
+      function route(r) {
+    
+          r.subrequest('/vinrouter')
+          .then(reply => {
+              r.error(reply.responseBody);
+              var json = JSON.parse(reply.responseBody);
+              r.error(json.environment);
+              r.headersOut['Env'] = json.environment;
+              r.return(200);
+          })
+          .catch(e => { 
+              r.error(e);
+              r.return(400, e);
+              });
+
+
+      
+      }
+
+      export default {route};

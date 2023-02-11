@@ -1,0 +1,53 @@
+controller:
+  nginxplus: true
+  replicaCount: 3
+  image:
+    repository: myregistry.com/nginx-ingress
+    tag: "1.9.0-njs"
+  config:
+    entries:
+      anykey: "2"
+      resolver-addresses: "10.100.0.10"
+      main-snippets: "load_module modules/ngx_http_js_module.so;"
+      http-snippets: |
+        js_import njs/vinrouter.js;
+
+        # Check CN value in CCRT-Subject Header exists and
+        # set $ccrtSubject_vin to the value CN
+        # e.g. CN=xxxxxxxxxxxxx
+        map $http_CCRT_Subject $ccrtSubject_vin {
+            default ""; # is empty
+            # Case senstive (~) matching
+            "~CN=(?<vin>[0-9A-Z]+)[,/]?" $vin; # not empty
+        }
+        # Place a comment here
+        # vinrouter server
+        upstream vinrouter {
+          zone vinrouter 64k;
+          server vinrouter-svc.default.svc.cluster.local:80 resolve;
+        }
+
+        server {
+          listen unix:/var/lib/nginx/vinrouter.sock;
+
+          location = /get_env {
+              js_content vinrouter.route;
+          }
+  
+          location = /vinrouter {
+  
+              internal;
+              proxy_pass http://vinrouter/api/vins/$ccrtSubject_vin;
+              proxy_pass_request_body off;
+              proxy_set_header Content-Length "";
+          }
+        }
+  enableSnippets: true
+  volumes:
+  - name: njs
+    configMap:
+      name: njsv3
+  volumeMounts:
+  - name: njs
+    mountPath: /etc/nginx/njs
+  version: "2"

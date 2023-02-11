@@ -1,0 +1,10 @@
+apiVersion: k8s.nginx.org/v1alpha1
+kind: Policy 
+metadata:
+  name: auth-request-vin-policy
+spec:
+  authRequest:
+    server: unix:/var/lib/nginx/vinrouter.sock:/get_env 
+    setVariables:
+    - name: $auth_request_env
+      value: $sent_http_env

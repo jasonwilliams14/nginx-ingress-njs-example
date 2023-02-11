@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vinrouter
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vinrouter
+  template:
+    metadata:
+      labels:
+        app: vinrouter
+    spec:
+      containers:
+      - name: vinrouter
+        image: myregistry.com/vinrouter
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vinrouter-svc
+  namespace: default
+spec:
+  clusterIP: None
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  selector:
+    app: vinrouter

@@ -1,0 +1,26 @@
+apiVersion: k8s.nginx.org/v1
+kind: VirtualServer
+metadata:
+  name: demo-example 
+  namespace: default
+spec:
+  host: demo.example.com
+  upstreams:
+  - name: prod 
+    service: prod-backend-svc
+    port: 80
+  - name: dev 
+    service: dev-backend-svc
+    port: 80
+  routes:
+  - path: /
+    policies:
+    - name: auth-request-vin
+    matches:
+    - conditions:
+      - variable: $auth_request_env
+        value: DEV
+      action:
+        pass: dev
+    action:
+      pass: prod

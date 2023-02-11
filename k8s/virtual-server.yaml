@@ -1,0 +1,44 @@
+apiVersion: k8s.nginx.org/v1
+kind: VirtualServer
+metadata:
+  name: demo-example 
+  namespace: default
+spec:
+  http-snippets: |
+    # upstream names are generated using the following rule: vs_<vs-namespace>_<vs_name>_<upstream-name>
+
+    # for our variables, we also use the prefix vs_<vs-namespace>_<vs_name> to ensure the names uniqueness  
+    # all '-' replaced with '_' in variable names, as '-' is not allowed
+
+    # Place a comment here
+    map $vs_default_demo_example_route $vs_default_demo_example_upstream {
+      default vs_default_demo-example_prod;
+      PROD vs_default_demo-example_prod;
+      DEV vs_default_demo-example_dev;
+    }
+  host: demo.example.com
+  upstreams:
+  - name: prod 
+    service: prod-backend-svc
+    port: 80
+  - name: dev 
+    service: dev-backend-svc
+    port: 80
+  server-snippets: |
+    location / {
+      if ($ccrtSubject_vin = "") {
+        return 400;
+      } 
+
+      auth_request /get_env_trampoline;
+      auth_request_set $vs_default_demo_example_route $sent_http_env;
+
+      proxy_pass http://$vs_default_demo_example_upstream;
+    }
+
+    location = /get_env_trampoline {
+      internal;
+      proxy_pass http://unix:/var/lib/nginx/vinrouter.sock:/get_env;
+      proxy_pass_request_body off;
+      proxy_set_header Content-Length "";
+    }
